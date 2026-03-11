@@ -43,8 +43,9 @@ pi -e ~/projects/pi-supervisor/src/index.ts
 | Command | Description |
 |---|---|
 | `/supervise <outcome>` | Start supervising toward a desired outcome |
+| `/supervise` or `/supervise settings` | Open the interactive settings panel |
 | `/supervise stop` | Stop active supervision |
-| `/supervise status` | Show current outcome, model, sensitivity, and intervention history |
+| `/supervise status` | Show current state (opens settings panel if active) |
 | `/supervise widget` | Toggle the status widget on/off |
 | `/supervise model` | Open the interactive model picker |
 | `/supervise model <provider/modelId>` | Set supervisor model directly |
@@ -67,6 +68,20 @@ pi -e ~/projects/pi-supervisor/src/index.ts
 The agent can also initiate supervision itself by calling the `start_supervision` tool — useful when it recognises a task needs goal tracking. Once active, supervision is locked: only the user can change or stop it.
 
 ## UI
+
+### Settings Panel
+
+Run `/supervise` (no args) or `/supervise settings` to open the interactive settings panel:
+
+- **Model** — shows current model; press Enter to browse all available models
+- **Sensitivity** — cycle through `low`/`medium`/`high` with Enter or Space
+- **Widget** — toggle visibility
+- **Outcome** (when active) — shows goal, steer count, and turn count
+- **Stop** (when active) — stop supervision directly from the panel
+
+Navigate with arrow keys, Escape to close. Changes are applied on close.
+
+### Live Widget
 
 **Footer** (always visible while supervising):
 ```
@@ -215,6 +230,7 @@ src/
   ui/
     status-widget.ts    # 🎯 footer badge + one-line widget with live thinking stream
     model-picker.ts     # Interactive model picker using pi's ModelSelectorComponent
+    settings-panel.ts   # Interactive settings overlay using pi-tui's SettingsList
 ```
 
 ## License

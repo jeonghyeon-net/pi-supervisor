@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2026-03-11
+
+### Added
+- **Interactive settings panel** — `/supervise` (no args) and `/supervise settings` now open a navigable settings UI built on pi-tui's `SettingsList` component instead of printing static text
+  - Arrow keys to navigate, Enter/Space to cycle values or open submenus, Escape to close
+  - **Model**: Enter opens the full interactive model picker as a submenu
+  - **Sensitivity**: cycles through `low`/`medium`/`high` with contextual descriptions
+  - **Widget**: toggles visibility inline
+  - **Outcome** (when active): displays current goal with steer/turn counts
+  - **Stop Supervision** (when active): confirm to stop directly from the panel
+- `/supervise status` now also opens the interactive settings panel when supervision state exists
+
 ## [0.4.1] - 2026-02-22
 
 ### Changed
@@ -55,6 +67,7 @@ Initial release of `pi-supervisor`.
 - **Footer status** — always-visible one-liner showing outcome, model, and steer count while supervising
 - **Widget** — shows goal, model, and recent interventions above the editor
 
+[0.4.2]: https://github.com/tintinweb/pi-supervisor/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/tintinweb/pi-supervisor/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/tintinweb/pi-supervisor/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/tintinweb/pi-supervisor/releases/tag/v0.3.0

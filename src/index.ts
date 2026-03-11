@@ -15,6 +15,7 @@ import { SupervisorStateManager, DEFAULT_PROVIDER, DEFAULT_MODEL_ID, DEFAULT_SEN
 import { analyze, loadSystemPrompt } from "./engine.js";
 import { updateUI, toggleWidget, isWidgetVisible, type WidgetAction } from "./ui/status-widget.js";
 import { pickModel } from "./ui/model-picker.js";
+import { openSettings } from "./ui/settings-panel.js";
 import { loadWorkspaceModel, saveWorkspaceModel } from "./workspace-config.js";
 import type { Sensitivity } from "./types.js";
 import { Type } from "@sinclair/typebox";
@@ -180,15 +181,16 @@ export default function (pi: ExtensionAPI) {
           ctx.ui.notify("No active supervision. Use /supervise <outcome> to start.", "info");
           return;
         }
-        updateUI(ctx, s);
-        const { source } = loadSystemPrompt(ctx.cwd);
-        const promptLabel = source === "built-in" ? "built-in prompt" : source.replace(ctx.cwd, ".");
-        ctx.ui.notify(
-          s.active
-            ? `Supervising: "${s.outcome}" | ${s.interventions.length} steers | ${promptLabel}`
-            : `Supervision stopped. Last outcome: "${s.outcome}"`,
-          s.active ? "info" : "warning"
-        );
+        // Open the interactive settings panel (same as bare /supervise)
+        const result = await openSettings(ctx, s, DEFAULT_PROVIDER, DEFAULT_MODEL_ID, DEFAULT_SENSITIVITY);
+        if (result?.model) {
+          if (state.isActive()) state.setModel(result.model.provider, result.model.modelId);
+          saveWorkspaceModel(ctx.cwd, result.model.provider, result.model.modelId);
+        }
+        if (result?.sensitivity && state.isActive()) state.setSensitivity(result.sensitivity);
+        if (result?.widget !== undefined && result.widget !== isWidgetVisible()) toggleWidget();
+        if (result?.action === "stop" && state.isActive()) { state.stop(); idleSteers = 0; }
+        updateUI(ctx, state.getState());
         return;
       }
 
@@ -258,32 +260,51 @@ export default function (pi: ExtensionAPI) {
         return;
       }
 
-      // --- start supervision ---
+      // --- interactive settings panel ---
 
-      if (!trimmed) {
+      if (!trimmed || trimmed === "settings") {
         const s = state.getState();
-        const currentModel = s ? `${s.provider}/${s.modelId}` : `${DEFAULT_PROVIDER}/${DEFAULT_MODEL_ID}`;
-        const currentSensitivity = s?.sensitivity ?? DEFAULT_SENSITIVITY;
-        const lines = [
-          "Usage:  /supervise <desired outcome>",
-          "",
-          "  /supervise Implement JWT auth with refresh tokens and tests",
-          "  /supervise Refactor the payment module — no breaking changes",
-          "",
-          "Subcommands:",
-          "  /supervise stop                      Stop active supervision",
-          "  /supervise status                    Show current state and widget",
-          "  /supervise widget                    Toggle widget visibility",
-          "  /supervise model                     Pick supervisor model (interactive)",
-          "  /supervise model <provider/modelId>  Set model directly",
-          "  /supervise sensitivity <low|medium|high>  Steer aggressiveness",
-          "",
-          `Current model:       ${currentModel}`,
-          `Current sensitivity: ${currentSensitivity}`,
-          `Widget:              ${isWidgetVisible() ? "visible" : "hidden"}`,
-          s?.active ? `Active outcome:      "${s.outcome}"` : "Not supervising",
-        ].join("\n");
-        ctx.ui.notify(lines, "info");
+        const result = await openSettings(ctx, s, DEFAULT_PROVIDER, DEFAULT_MODEL_ID, DEFAULT_SENSITIVITY);
+        if (!result) return; // user cancelled with no changes
+
+        // Apply model change
+        if (result.model) {
+          const { provider: p, modelId: m } = result.model;
+          if (state.isActive()) {
+            state.setModel(p, m);
+          }
+          const saved = saveWorkspaceModel(ctx.cwd, p, m);
+          ctx.ui.notify(
+            `Supervisor model set to ${p}/${m}${state.isActive() ? "" : " (takes effect on next /supervise)"}` +
+              (saved ? " · saved to .pi/" : ""),
+            "info"
+          );
+        }
+
+        // Apply sensitivity change
+        if (result.sensitivity) {
+          if (state.isActive()) {
+            state.setSensitivity(result.sensitivity);
+          }
+          ctx.ui.notify(`Supervisor sensitivity set to "${result.sensitivity}"`, "info");
+        }
+
+        // Apply widget toggle
+        if (result.widget !== undefined) {
+          const currentlyVisible = isWidgetVisible();
+          if (result.widget !== currentlyVisible) {
+            toggleWidget();
+          }
+        }
+
+        // Apply stop action
+        if (result.action === "stop" && state.isActive()) {
+          state.stop();
+          idleSteers = 0;
+          ctx.ui.notify("Supervisor stopped.", "info");
+        }
+
+        updateUI(ctx, state.getState());
         return;
       }
 
