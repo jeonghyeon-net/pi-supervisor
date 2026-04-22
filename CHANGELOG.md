@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2026-04-22
+
+### Fixed
+- **Removed blind fallback steering** — supervisor analysis errors no longer inject the hardcoded `Please continue working toward the goal.` message; failed analyses now skip steering for that turn instead of causing loops.
+- **Safer end-of-run delivery** — `agent_end` steering is deferred one tick and only falls back to queued delivery if pi is still clearing streaming state, avoiding both the processing race and the old `followUp`-only behavior.
+- **Duplicate steer suppression** — identical consecutive steering messages are ignored to prevent supervisor loops when the model repeats itself.
+
 ## [0.4.3] - 2026-04-22
 
 ### Fixed
@@ -72,6 +79,7 @@ Initial release of `pi-supervisor`.
 - **Footer status** — always-visible one-liner showing outcome, model, and steer count while supervising
 - **Widget** — shows goal, model, and recent interventions above the editor
 
+[0.4.4]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.0...v0.4.1

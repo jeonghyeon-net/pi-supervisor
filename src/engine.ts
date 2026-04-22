@@ -211,7 +211,7 @@ Has this outcome been fully achieved? Analyze and respond with JSON only.`;
 
 /**
  * Analyze the current conversation and return a steering decision.
- * Falls back to { action: "steer" } when the agent is idle to prevent it from staying stuck.
+ * On analysis failures, return "continue" so we never inject blind fallback steering.
  */
 export async function analyze(
   ctx: ExtensionContext,
@@ -230,10 +230,8 @@ export async function analyze(
 
   try {
     return await callSupervisorModel(ctx, state.provider, state.modelId, systemPrompt, userPrompt, signal, onDelta);
-  } catch {
-    // When idle and analysis fails, nudge rather than silently do nothing
-    return agentIsIdle
-      ? { action: "steer", message: "Please continue working toward the goal.", reasoning: "Analysis error", confidence: 0 }
-      : { action: "continue", reasoning: "Analysis error", confidence: 0 };
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return { action: "continue", reasoning: `Analysis error: ${detail}`, confidence: 0 };
   }
 }

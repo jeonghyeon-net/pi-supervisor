@@ -17,7 +17,7 @@ import { updateUI, toggleWidget, isWidgetVisible, type WidgetAction } from "./ui
 import { pickModel } from "./ui/model-picker.js";
 import { openSettings } from "./ui/settings-panel.js";
 import { loadWorkspaceModel, saveWorkspaceModel } from "./workspace-config.js";
-import type { Sensitivity } from "./types.js";
+import type { Sensitivity, SupervisorState } from "./types.js";
 import { Type } from "@sinclair/typebox";
 
 /**
@@ -40,11 +40,45 @@ function extractThinking(accumulated: string): string {
 
 // After this many consecutive idle-state steers with no "done", run a lenient final evaluation.
 const MAX_IDLE_STEERS = 5;
+const ANALYSIS_WARNING_INTERVAL_MS = 15_000;
+
+function normalizeMessage(message: string): string {
+  return message.trim().replace(/\s+/g, " ");
+}
+
+function isDuplicateSteer(state: SupervisorState, message: string): boolean {
+  const last = state.interventions[state.interventions.length - 1]?.message;
+  return !!last && normalizeMessage(last) === normalizeMessage(message);
+}
 
 export default function (pi: ExtensionAPI) {
   const state = new SupervisorStateManager(pi);
   let currentCtx: ExtensionContext | undefined;
   let idleSteers = 0; // consecutive agent_end steers; reset on done/stop/new supervision
+  let lastAnalysisWarningAt = 0;
+
+  function maybeWarnAnalysisError(ctx: ExtensionContext, reasoning: string) {
+    if (!reasoning.startsWith("Analysis error:")) return;
+    const now = Date.now();
+    if (now - lastAnalysisWarningAt < ANALYSIS_WARNING_INTERVAL_MS) return;
+    lastAnalysisWarningAt = now;
+    const detail = reasoning.slice("Analysis error:".length).trim() || "unknown error";
+    ctx.ui.notify(`Supervisor analysis failed for this turn: ${detail}`, "warning");
+  }
+
+  function sendIdleSteer(message: string) {
+    setTimeout(() => {
+      try {
+        pi.sendUserMessage(message);
+      } catch {
+        try {
+          pi.sendUserMessage(message, { deliverAs: "followUp" });
+        } catch {
+          // Ignore: if both delivery paths fail, skip this steer instead of throwing.
+        }
+      }
+    }, 0);
+  }
 
   // ---- Session lifecycle: restore state ----
 
@@ -87,9 +121,16 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
+    maybeWarnAnalysisError(ctx, decision.reasoning);
+
     // Higher bar for medium — less willing to disrupt productive work
     const threshold = s.sensitivity === "medium" ? 0.9 : 0.85;
-    if (decision.action === "steer" && decision.message && decision.confidence >= threshold) {
+    if (
+      decision.action === "steer" &&
+      decision.message &&
+      decision.confidence >= threshold &&
+      !isDuplicateSteer(s, decision.message)
+    ) {
       state.addIntervention({
         turnCount: s.turnCount,
         message: decision.message,
@@ -122,7 +163,9 @@ export default function (pi: ExtensionAPI) {
       updateUI(ctx, state.getState()!, { type: "analyzing", turn: s.turnCount, thinking });
     });
 
-    if (decision.action === "steer" && decision.message) {
+    maybeWarnAnalysisError(ctx, decision.reasoning);
+
+    if (decision.action === "steer" && decision.message && !isDuplicateSteer(s, decision.message)) {
       idleSteers++;
       state.addIntervention({
         turnCount: s.turnCount,
@@ -131,9 +174,9 @@ export default function (pi: ExtensionAPI) {
         timestamp: Date.now(),
       });
       updateUI(ctx, state.getState(), { type: "steering", message: decision.message });
-      // agent_end can race slightly with the runtime still being marked as streaming;
-      // queue explicitly so supervision doesn't throw on message delivery.
-      pi.sendUserMessage(decision.message, { deliverAs: "followUp" });
+      // When agent_end fires, pi can still be clearing its internal streaming state.
+      // Defer one tick so idle turns trigger immediately, then fall back to queued delivery if needed.
+      sendIdleSteer(decision.message);
     } else if (decision.action === "done") {
       idleSteers = 0;
       updateUI(ctx, state.getState(), { type: "done" });
