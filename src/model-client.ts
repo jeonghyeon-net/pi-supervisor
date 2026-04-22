@@ -8,7 +8,9 @@
 import {
   createAgentSession,
   DefaultResourceLoader,
+  getAgentDir,
   SessionManager,
+  SettingsManager,
 } from "@mariozechner/pi-coding-agent";
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
 import type { SteeringDecision } from "./types.js";
@@ -29,7 +31,16 @@ export async function callModel(
   const model = ctx.modelRegistry.find(provider, modelId);
   if (!model) return null;
 
+  const agentDir = getAgentDir();
+  const settingsManager = SettingsManager.create(ctx.cwd, agentDir);
+
+  // pi >= 0.68 requires cwd/agentDir-aware resource loading + session setup.
+  // Omitting these can bubble up as node:path errors like
+  // "The \"path\" argument must be of type string. Received undefined".
   const loader = new DefaultResourceLoader({
+    cwd: ctx.cwd,
+    agentDir,
+    settingsManager,
     noExtensions: true,
     noSkills: true,
     noPromptTemplates: true,
@@ -41,7 +52,9 @@ export async function callModel(
   let session: Awaited<ReturnType<typeof createAgentSession>>["session"];
   try {
     const result = await createAgentSession({
-      sessionManager: SessionManager.inMemory(),
+      cwd: ctx.cwd,
+      sessionManager: SessionManager.inMemory(ctx.cwd),
+      settingsManager,
       modelRegistry: ctx.modelRegistry,
       model,
       tools: [],
