@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Pi v0.68+ path crash in supervisor analysis** — the internal one-shot analysis session now passes `cwd`, `agentDir`, and `settingsManager` into `DefaultResourceLoader`, `SessionManager.inMemory()`, and `createAgentSession()`, fixing `The "path" argument must be of type string. Received undefined` during supervision. Mirrors the compatibility fix discussed in `tintinweb/pi-subagents` issues #27 and #31.
+- **Centralized analysis runtime wiring** — all `cwd`/`agentDir`/`settingsManager` setup for the supervisor's internal analysis session now lives in a single helper with explicit path validation, reducing the chance of future omissions.
 
 ## [0.4.4] - 2026-04-22
 

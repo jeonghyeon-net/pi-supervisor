@@ -15,6 +15,50 @@ import {
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
 import type { SteeringDecision } from "./types.js";
 
+type ResourceLoaderOptions = ConstructorParameters<typeof DefaultResourceLoader>[0];
+type AgentSessionOptions = Parameters<typeof createAgentSession>[0];
+
+function requirePath(value: string | undefined, label: string): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`Supervisor analysis requires ${label} to be a non-empty path string.`);
+  }
+  return value;
+}
+
+function createAnalysisRuntime(ctx: ExtensionContext, systemPrompt: string) {
+  const cwd = requirePath(ctx.cwd, "ctx.cwd");
+  const agentDir = requirePath(getAgentDir(), "agentDir");
+  const settingsManager = SettingsManager.create(cwd, agentDir);
+
+  // Keep all cwd/agentDir plumbing in one place so future pi SDK changes
+  // cannot leave one callsite half-configured.
+  const loaderOptions: ResourceLoaderOptions = {
+    cwd,
+    agentDir,
+    settingsManager,
+    noExtensions: true,
+    noSkills: true,
+    noPromptTemplates: true,
+    noThemes: true,
+    systemPromptOverride: () => systemPrompt,
+  };
+
+  const sessionOptions: AgentSessionOptions = {
+    cwd,
+    sessionManager: SessionManager.inMemory(cwd),
+    settingsManager,
+    tools: [],
+  };
+
+  return {
+    cwd,
+    agentDir,
+    settingsManager,
+    loader: new DefaultResourceLoader(loaderOptions),
+    sessionOptions,
+  };
+}
+
 /**
  * Run a one-shot LLM call using pi's internal agent session.
  * Returns the raw response text, or null on failure.
@@ -31,33 +75,19 @@ export async function callModel(
   const model = ctx.modelRegistry.find(provider, modelId);
   if (!model) return null;
 
-  const agentDir = getAgentDir();
-  const settingsManager = SettingsManager.create(ctx.cwd, agentDir);
-
   // pi >= 0.68 requires cwd/agentDir-aware resource loading + session setup.
   // Omitting these can bubble up as node:path errors like
   // "The \"path\" argument must be of type string. Received undefined".
-  const loader = new DefaultResourceLoader({
-    cwd: ctx.cwd,
-    agentDir,
-    settingsManager,
-    noExtensions: true,
-    noSkills: true,
-    noPromptTemplates: true,
-    noThemes: true,
-    systemPromptOverride: () => systemPrompt,
-  });
+  const runtime = createAnalysisRuntime(ctx, systemPrompt);
+  const loader = runtime.loader;
   await loader.reload();
 
   let session: Awaited<ReturnType<typeof createAgentSession>>["session"];
   try {
     const result = await createAgentSession({
-      cwd: ctx.cwd,
-      sessionManager: SessionManager.inMemory(ctx.cwd),
-      settingsManager,
+      ...runtime.sessionOptions,
       modelRegistry: ctx.modelRegistry,
       model,
-      tools: [],
       resourceLoader: loader,
     });
     session = result.session;
