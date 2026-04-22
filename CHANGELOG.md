@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.7] - 2026-04-22
+
+### Fixed
+- **Release the hardened analysis runtime setup** — ships the centralized `cwd`/`agentDir`/`settingsManager` helper with explicit path validation for the supervisor's internal analysis session, preventing future partial wiring regressions.
+
 ## [0.4.5] - 2026-04-22
 
 ### Fixed
@@ -85,6 +90,7 @@ Initial release of `pi-supervisor`.
 - **Footer status** — always-visible one-liner showing outcome, model, and steer count while supervising
 - **Widget** — shows goal, model, and recent interventions above the editor
 
+[0.4.7]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.5...v0.4.7
 [0.4.5]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.2...v0.4.3

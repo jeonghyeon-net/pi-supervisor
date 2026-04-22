@@ -1,6 +1,6 @@
 {
   "name": "@jeonghyeon.net/pi-supervisor",
-  "version": "0.4.5",
+  "version": "0.4.7",
   "description": "A pi extension that supervises the chat and steers it towards a defined outcome",
   "author": "tintinweb",
   "license": "MIT",
