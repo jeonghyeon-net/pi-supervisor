@@ -131,7 +131,9 @@ export default function (pi: ExtensionAPI) {
         timestamp: Date.now(),
       });
       updateUI(ctx, state.getState(), { type: "steering", message: decision.message });
-      pi.sendUserMessage(decision.message);
+      // agent_end can race slightly with the runtime still being marked as streaming;
+      // queue explicitly so supervision doesn't throw on message delivery.
+      pi.sendUserMessage(decision.message, { deliverAs: "followUp" });
     } else if (decision.action === "done") {
       idleSteers = 0;
       updateUI(ctx, state.getState(), { type: "done" });

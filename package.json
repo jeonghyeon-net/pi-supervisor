@@ -1,16 +1,16 @@
 {
-  "name": "pi-supervisor",
-  "version": "0.4.2",
+  "name": "@jeonghyeon.net/pi-supervisor",
+  "version": "0.4.3",
   "description": "A pi extension that supervises the chat and steers it towards a defined outcome",
   "author": "tintinweb",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tintinweb/pi-supervisor.git"
+    "url": "https://github.com/jeonghyeon-net/pi-supervisor.git"
   },
-  "homepage": "https://github.com/tintinweb/pi-supervisor#readme",
+  "homepage": "https://github.com/jeonghyeon-net/pi-supervisor#readme",
   "bugs": {
-    "url": "https://github.com/tintinweb/pi-supervisor/issues"
+    "url": "https://github.com/jeonghyeon-net/pi-supervisor/issues"
   },
   "keywords": [
     "pi-package",
@@ -34,7 +34,7 @@
   },
   "pi": {
     "extensions": ["./src/index.ts"],
-    "video": "https://github.com/tintinweb/pi-supervisor/raw/master/media/demo.mp4",
-    "image": "https://github.com/tintinweb/pi-supervisor/raw/master/media/screenshot.png"
+    "video": "https://github.com/jeonghyeon-net/pi-supervisor/raw/master/media/demo.mp4",
+    "image": "https://github.com/jeonghyeon-net/pi-supervisor/raw/master/media/screenshot.png"
   }
 }

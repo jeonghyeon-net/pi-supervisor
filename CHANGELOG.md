@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] - 2026-04-22
+
+### Fixed
+- **Queued supervision messages at `agent_end`** — explicitly sends end-of-run steering via `deliverAs: "followUp"` so pi does not throw `Agent is already processing` when the runtime still considers the agent streaming.
+
 ## [0.4.2] - 2026-03-11
 
 ### Added
@@ -67,7 +72,8 @@ Initial release of `pi-supervisor`.
 - **Footer status** — always-visible one-liner showing outcome, model, and steer count while supervising
 - **Widget** — shows goal, model, and recent interventions above the editor
 
-[0.4.2]: https://github.com/tintinweb/pi-supervisor/compare/v0.4.1...v0.4.2
-[0.4.1]: https://github.com/tintinweb/pi-supervisor/compare/v0.4.0...v0.4.1
-[0.4.0]: https://github.com/tintinweb/pi-supervisor/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/tintinweb/pi-supervisor/releases/tag/v0.3.0
+[0.4.3]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.2...v0.4.3
+[0.4.2]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.1...v0.4.2
+[0.4.1]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/jeonghyeon-net/pi-supervisor/releases/tag/v0.3.0

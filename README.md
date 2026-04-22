@@ -1,4 +1,4 @@
-# pi-supervisor
+# @jeonghyeon.net/pi-supervisor
 
 A [pi](https://pi.dev) extension that supervises the coding agent and steers it toward a defined outcome. It observes every conversation turn, injects guiding messages when the agent drifts, and signals when the goal is reached — like a tech lead watching over a dev's shoulder.
 
@@ -6,7 +6,7 @@ A [pi](https://pi.dev) extension that supervises the coding agent and steers it 
 
 > **Status:** Early release.
 
-<img height="298" alt="image" src="https://github.com/tintinweb/pi-supervisor/raw/master/media/screenshot.png" />
+<img height="298" alt="image" src="https://github.com/jeonghyeon-net/pi-supervisor/raw/master/media/screenshot.png" />
 
 
 
@@ -29,7 +29,7 @@ The supervisor is a pure outside observer. It runs in a separate in-memory pi se
 ## Install
 
 ```bash
-pi install npm:pi-supervisor
+pi install npm:@jeonghyeon.net/pi-supervisor
 ```
 
 Or load directly for development:
@@ -235,4 +235,4 @@ src/
 
 ## License
 
-MIT — [tintinweb](https://github.com/tintinweb)
+MIT — [jeonghyeon-net](https://github.com/jeonghyeon-net)
