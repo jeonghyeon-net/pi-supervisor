@@ -1,7 +1,6 @@
 /**
- * Supervisor UI — footer status indicator and widget.
+ * Supervisor UI — live widget.
  *
- * Footer: 🎯 emoji badge.
  * Widget line 1: ◉ Supervising · Goal: "…" · model · steers · action
  * Widget line 2: dim thinking text while analyzing (temporary)
  *
@@ -13,7 +12,6 @@ import { truncateToWidth } from "@mariozechner/pi-tui";
 import type { SupervisorState } from "../types.js";
 
 const WIDGET_ID = "supervisor";
-const STATUS_ID = "supervisor";
 
 const MAX_OUTCOME_DISPLAY = 48;
 const MAX_STEER_DISPLAY   = 50;
@@ -42,21 +40,20 @@ function truncate(s: string, max: number): string {
 }
 
 /**
- * Update footer + widget. Call this every time state or action changes.
- * Clears both when state is null or inactive.
+ * Update the supervisor widget. Call this every time state or action changes.
+ * Clears it when state is null or inactive.
  */
 export function updateUI(
   ctx: ExtensionContext,
   state: SupervisorState | null,
   action: WidgetAction = { type: "watching" }
 ): void {
+  ctx.ui.setStatus("supervisor", undefined);
+
   if (!state || !state.active) {
-    ctx.ui.setStatus(STATUS_ID, undefined);
     ctx.ui.setWidget(WIDGET_ID, undefined);
     return;
   }
-
-  ctx.ui.setStatus(STATUS_ID, "🎯");
 
   if (!_widgetVisible) {
     ctx.ui.setWidget(WIDGET_ID, undefined);

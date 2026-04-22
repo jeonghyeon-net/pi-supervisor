@@ -87,7 +87,7 @@ export async function openSettings(
       {
         id: "widget",
         label: "Widget",
-        description: "Show/hide the supervisor widget in the footer",
+        description: "Show/hide the supervisor widget",
         currentValue: isWidgetVisible() ? "visible" : "hidden",
         values: ["visible", "hidden"],
       },

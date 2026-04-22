@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.8] - 2026-04-22
+
+### Changed
+- **Removed the always-on footer status badge** — supervisor no longer renders the `🎯` icon in the footer; only the live widget remains visible when enabled.
+- **UI copy/docs updated** — settings text and README references now describe the supervisor widget without mentioning a footer badge.
+
 ## [0.4.7] - 2026-04-22
 
 ### Fixed

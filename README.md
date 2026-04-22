@@ -83,11 +83,6 @@ Navigate with arrow keys, Escape to close. Changes are applied on close.
 
 ### Live Widget
 
-**Footer** (always visible while supervising):
-```
-🎯
-```
-
 **Widget** (one line, updated live):
 ```
 ◉ Supervising · Goal: "Refactor auth module…" · claude-haiku · ↗ 2 · ⟳ turn 4
@@ -228,7 +223,7 @@ src/
   model-client.ts       # One-shot supervisor LLM calls via pi's AgentSession API
   workspace-config.ts   # .pi/supervisor-config.json read/write for model persistence
   ui/
-    status-widget.ts    # 🎯 footer badge + one-line widget with live thinking stream
+    status-widget.ts    # Supervisor widget with live thinking stream
     model-picker.ts     # Interactive model picker using pi's ModelSelectorComponent
     settings-panel.ts   # Interactive settings overlay using pi-tui's SettingsList
 ```
