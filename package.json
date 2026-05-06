@@ -1,9 +1,13 @@
 {
   "name": "@jeonghyeon.net/pi-supervisor",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "description": "A pi extension that supervises the chat and steers it towards a defined outcome",
   "author": "tintinweb",
   "license": "MIT",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "npm run typecheck && node --test test/*.test.mjs"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/jeonghyeon-net/pi-supervisor.git"
@@ -29,8 +33,9 @@
     "@sinclair/typebox": "latest"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0"
+    "@mariozechner/jiti": "^2.6.5",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
   },
   "pi": {
     "extensions": [

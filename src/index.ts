@@ -19,6 +19,7 @@ import { openSettings } from "./ui/settings-panel.js";
 import { loadWorkspaceModel, saveWorkspaceModel } from "./workspace-config.js";
 import type { Sensitivity, SupervisorState } from "./types.js";
 import { Type } from "@sinclair/typebox";
+import { createAnalysisToken, getCurrentAnalysisState } from "./analysis-guard.js";
 
 /**
  * Extract partial reasoning text from the supervisor's streaming JSON response.
@@ -66,17 +67,24 @@ export default function (pi: ExtensionAPI) {
     ctx.ui.notify(`Supervisor analysis failed for this turn: ${detail}`, "warning");
   }
 
+  function queueUserMessage(message: string, deliverAs: "steer" | "followUp"): void {
+    try {
+      pi.sendUserMessage(message, { deliverAs });
+    } catch {
+      if (deliverAs !== "steer") return;
+      try {
+        pi.sendUserMessage(message, { deliverAs: "followUp" });
+      } catch {
+        // Ignore synchronous delivery failures; async runtime failures are reported by pi.
+      }
+    }
+  }
+
   function sendIdleSteer(message: string) {
     setTimeout(() => {
-      try {
-        pi.sendUserMessage(message);
-      } catch {
-        try {
-          pi.sendUserMessage(message, { deliverAs: "followUp" });
-        } catch {
-          // Ignore: if both delivery paths fail, skip this steer instead of throwing.
-        }
-      }
+      // Always specify a delivery mode. pi may still be unwinding streaming state
+      // immediately after agent_end; omitting this can surface busy-agent errors.
+      queueUserMessage(message, "followUp");
     }, 0);
   }
 
@@ -109,6 +117,7 @@ export default function (pi: ExtensionAPI) {
     currentCtx = ctx;
     if (!state.isActive()) return;
     const s = state.getState()!;
+    const analysisToken = createAnalysisToken(s);
 
     if (s.sensitivity === "low") return;
     if (event.turnIndex < 2) return; // let the agent settle before intervening
@@ -121,24 +130,27 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
+    const current = getCurrentAnalysisState(state.getState(), analysisToken);
+    if (!current) return;
+
     maybeWarnAnalysisError(ctx, decision.reasoning);
 
     // Higher bar for medium — less willing to disrupt productive work
-    const threshold = s.sensitivity === "medium" ? 0.9 : 0.85;
+    const threshold = current.sensitivity === "medium" ? 0.9 : 0.85;
     if (
       decision.action === "steer" &&
       decision.message &&
       decision.confidence >= threshold &&
-      !isDuplicateSteer(s, decision.message)
+      !isDuplicateSteer(current, decision.message)
     ) {
       state.addIntervention({
-        turnCount: s.turnCount,
+        turnCount: analysisToken.turnCount,
         message: decision.message,
         reasoning: decision.reasoning,
         timestamp: Date.now(),
       });
       updateUI(ctx, state.getState(), { type: "steering", message: decision.message });
-      pi.sendUserMessage(decision.message, { deliverAs: "steer" });
+      queueUserMessage(decision.message, "steer");
     }
   });
 
@@ -152,23 +164,29 @@ export default function (pi: ExtensionAPI) {
 
     state.incrementTurnCount();
     const s = state.getState()!;
+    const analysisToken = createAnalysisToken(s);
 
     // Stagnation: too many steers with no "done" → final lenient evaluation
     const stagnating = idleSteers >= MAX_IDLE_STEERS;
 
-    updateUI(ctx, s, { type: "analyzing", turn: s.turnCount });
+    updateUI(ctx, s, { type: "analyzing", turn: analysisToken.turnCount });
 
     const decision = await analyze(ctx, s, true /* always idle at agent_end */, stagnating, undefined, (accumulated) => {
+      const current = getCurrentAnalysisState(state.getState(), analysisToken);
+      if (!current) return;
       const thinking = extractThinking(accumulated);
-      updateUI(ctx, state.getState()!, { type: "analyzing", turn: s.turnCount, thinking });
+      updateUI(ctx, current, { type: "analyzing", turn: analysisToken.turnCount, thinking });
     });
+
+    const current = getCurrentAnalysisState(state.getState(), analysisToken);
+    if (!current) return;
 
     maybeWarnAnalysisError(ctx, decision.reasoning);
 
-    if (decision.action === "steer" && decision.message && !isDuplicateSteer(s, decision.message)) {
+    if (decision.action === "steer" && decision.message && !isDuplicateSteer(current, decision.message)) {
       idleSteers++;
       state.addIntervention({
-        turnCount: s.turnCount,
+        turnCount: analysisToken.turnCount,
         message: decision.message,
         reasoning: decision.reasoning,
         timestamp: Date.now(),
@@ -181,7 +199,7 @@ export default function (pi: ExtensionAPI) {
       idleSteers = 0;
       updateUI(ctx, state.getState(), { type: "done" });
       const suffix = stagnating ? ` (stopped after ${MAX_IDLE_STEERS} steering attempts — goal substantially achieved)` : "";
-      ctx.ui.notify(`Supervisor: outcome achieved! "${s.outcome}"${suffix}`, "info");
+      ctx.ui.notify(`Supervisor: outcome achieved! "${current.outcome}"${suffix}`, "info");
       state.stop();
       updateUI(ctx, state.getState());
     } else {

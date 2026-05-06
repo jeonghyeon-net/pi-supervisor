@@ -16,6 +16,7 @@ import { homedir } from "node:os";
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
 import type { ConversationMessage, SteeringDecision, SupervisorState } from "./types.js";
 import { callSupervisorModel } from "./model-client.js";
+import { buildSnapshotFromBranch } from "./snapshot.js";
 
 // ---- System prompt loading ----
 
@@ -53,6 +54,8 @@ Trust the agent to complete what it has started. Avoid interrupting productive w
 - Never repeat a steering message that had no effect — escalate or change approach.
 - A good steer answers the agent's question OR redirects to the missing piece of the outcome.
 - If the agent is taking shortcuts to satisfy the goal without properly achieving it, always steer and remind it not to take shortcuts.
+- Treat TOOL CALL and TOOL RESULT entries in the recent conversation as authoritative evidence. Do not claim a command was not run, or that output is missing, when a matching TOOL RESULT is present.
+- If recent context shows runtime/tool-protocol errors rather than agent negligence, avoid repeated command demands; if you must steer, ask for one focused retry instead.
 
 "done" CRITERIA: The core outcome is complete and functional. Minor polish, style tweaks, or
 optional improvements do NOT block "done". Prefer stopping when the goal is substantially
@@ -107,46 +110,15 @@ function extractCompactionSummary(ctx: ExtensionContext): string | null {
   return summary;
 }
 
-/** Extract recent user/assistant messages from the session branch. */
+/** Extract recent messages, tool calls, and tool results from the session branch. */
 function buildSnapshot(ctx: ExtensionContext, limit: number): ConversationMessage[] {
-  const messages: ConversationMessage[] = [];
-
-  for (const entry of ctx.sessionManager.getBranch()) {
-    if (entry.type !== "message") continue;
-    const msg = (entry as any).message;
-    if (!msg) continue;
-
-    if (msg.role === "user") {
-      const content = extractText(msg.content);
-      if (content) messages.push({ role: "user", content });
-    } else if (msg.role === "assistant") {
-      const content = extractAssistantText(msg.content);
-      if (content) messages.push({ role: "assistant", content });
-    }
-  }
-
-  // Return the most recent N messages
-  return messages.slice(-limit);
+  return buildSnapshotFromBranch(ctx.sessionManager.getBranch(), limit);
 }
 
-function extractText(content: unknown): string {
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    return content
-      .filter((b: any) => b.type === "text")
-      .map((b: any) => b.text as string)
-      .join("\n")
-      .trim();
-  }
-  return "";
-}
-
-function extractAssistantText(content: unknown): string {
-  if (!Array.isArray(content)) return "";
-  const textParts = content
-    .filter((b: any) => b.type === "text")
-    .map((b: any) => b.text as string);
-  return textParts.join("\n").trim();
+function formatRole(role: ConversationMessage["role"]): string {
+  if (role === "user") return "USER";
+  if (role === "assistant") return "ASSISTANT";
+  return "TOOL";
 }
 
 /** Build the user-facing prompt for the supervisor LLM. */
@@ -169,7 +141,7 @@ function buildUserPrompt(
     snapshot.length === 0
       ? "(No conversation yet)"
       : snapshot
-          .map((m) => `${m.role === "user" ? "USER" : "ASSISTANT"}: ${m.content}`)
+          .map((m) => `${formatRole(m.role)}: ${m.content}`)
           .join("\n\n---\n\n");
 
   const agentStatus = agentIsIdle
@@ -197,7 +169,7 @@ SENSITIVITY: ${state.sensitivity}
 
 ${agentStatus}${stagnationWarning}
 
-${summarySection}RECENT CONVERSATION (last ${snapshot.length} messages):
+${summarySection}RECENT CONVERSATION (last ${snapshot.length} messages/tool events):
 ${conversationText}
 
 PREVIOUS INTERVENTIONS BY YOU:

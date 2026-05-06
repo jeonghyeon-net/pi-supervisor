@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.4.9] - 2026-05-06
+
+### Fixed
+- Supervisor analysis now includes assistant tool calls, tool results, user bash executions, and assistant runtime errors in its conversation snapshot, so it can verify real shell/gh output instead of falsely demanding a rerun.
+- End-of-run steering always specifies a queued delivery mode and ignores stale mid-run analysis results, reducing busy-agent and repeated stale-steer loops.
+
+### Added
+- Regression tests for supervisor snapshot extraction of tool calls/results and runtime errors.
+
 ## [0.4.8] - 2026-04-22
 
 ### Changed
@@ -96,6 +107,9 @@ Initial release of `pi-supervisor`.
 - **Footer status** — always-visible one-liner showing outcome, model, and steer count while supervising
 - **Widget** — shows goal, model, and recent interventions above the editor
 
+[Unreleased]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.9...HEAD
+[0.4.9]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.8...v0.4.9
+[0.4.8]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.7...v0.4.8
 [0.4.7]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.5...v0.4.7
 [0.4.5]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.3...v0.4.4
