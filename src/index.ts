@@ -20,6 +20,7 @@ import { loadWorkspaceModel, saveWorkspaceModel } from "./workspace-config.js";
 import type { Sensitivity, SupervisorState } from "./types.js";
 import { Type } from "@sinclair/typebox";
 import { createAnalysisToken, getCurrentAnalysisState } from "./analysis-guard.js";
+import { AgentRunSteeringTracker } from "./steering-run.js";
 
 /**
  * Extract partial reasoning text from the supervisor's streaming JSON response.
@@ -57,6 +58,7 @@ export default function (pi: ExtensionAPI) {
   let currentCtx: ExtensionContext | undefined;
   let idleSteers = 0; // consecutive agent_end steers; reset on done/stop/new supervision
   let lastAnalysisWarningAt = 0;
+  const runSteering = new AgentRunSteeringTracker();
 
   function maybeWarnAnalysisError(ctx: ExtensionContext, reasoning: string) {
     if (!reasoning.startsWith("Analysis error:")) return;
@@ -103,6 +105,11 @@ export default function (pi: ExtensionAPI) {
 
   // ---- Keep ctx fresh ----
 
+  pi.on("agent_start", async (_event, ctx) => {
+    currentCtx = ctx;
+    runSteering.startRun();
+  });
+
   pi.on("turn_start", async (_event, ctx) => {
     currentCtx = ctx;
   });
@@ -118,7 +125,9 @@ export default function (pi: ExtensionAPI) {
     if (!state.isActive()) return;
     const s = state.getState()!;
     const analysisToken = createAnalysisToken(s);
+    const runId = runSteering.getCurrentRunId();
 
+    if (runSteering.hasSteered(runId)) return;
     if (s.sensitivity === "low") return;
     if (event.turnIndex < 2) return; // let the agent settle before intervening
     if (s.sensitivity === "medium" && (event.turnIndex - 2) % 3 !== 0) return;
@@ -131,7 +140,7 @@ export default function (pi: ExtensionAPI) {
     }
 
     const current = getCurrentAnalysisState(state.getState(), analysisToken);
-    if (!current) return;
+    if (!current || runSteering.hasSteered(runId)) return;
 
     maybeWarnAnalysisError(ctx, decision.reasoning);
 
@@ -143,6 +152,7 @@ export default function (pi: ExtensionAPI) {
       decision.confidence >= threshold &&
       !isDuplicateSteer(current, decision.message)
     ) {
+      if (!runSteering.tryMarkSteered(runId)) return;
       state.addIntervention({
         turnCount: analysisToken.turnCount,
         message: decision.message,
@@ -162,9 +172,15 @@ export default function (pi: ExtensionAPI) {
     currentCtx = ctx;
     if (!state.isActive()) return;
 
+    const runId = runSteering.getCurrentRunId();
     state.incrementTurnCount();
     const s = state.getState()!;
     const analysisToken = createAnalysisToken(s);
+
+    if (runSteering.hasSteered(runId)) {
+      updateUI(ctx, s, { type: "watching" });
+      return;
+    }
 
     // Stagnation: too many steers with no "done" → final lenient evaluation
     const stagnating = idleSteers >= MAX_IDLE_STEERS;
@@ -179,11 +195,12 @@ export default function (pi: ExtensionAPI) {
     });
 
     const current = getCurrentAnalysisState(state.getState(), analysisToken);
-    if (!current) return;
+    if (!current || runSteering.hasSteered(runId)) return;
 
     maybeWarnAnalysisError(ctx, decision.reasoning);
 
     if (decision.action === "steer" && decision.message && !isDuplicateSteer(current, decision.message)) {
+      if (!runSteering.tryMarkSteered(runId)) return;
       idleSteers++;
       state.addIntervention({
         turnCount: analysisToken.turnCount,

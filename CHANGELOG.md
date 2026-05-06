@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.10] - 2026-05-06
+
+### Fixed
+- Prevent the supervisor from sending both a mid-run steering message and an end-of-run follow-up for the same agent run.
+
+### Added
+- Regression coverage for one supervisor steering intervention per agent run.
+
 ## [0.4.9] - 2026-05-06
 
 ### Fixed
@@ -107,7 +115,8 @@ Initial release of `pi-supervisor`.
 - **Footer status** — always-visible one-liner showing outcome, model, and steer count while supervising
 - **Widget** — shows goal, model, and recent interventions above the editor
 
-[Unreleased]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.9...HEAD
+[Unreleased]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.10...HEAD
+[0.4.10]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.9...v0.4.10
 [0.4.9]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.8...v0.4.9
 [0.4.8]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.7...v0.4.8
 [0.4.7]: https://github.com/jeonghyeon-net/pi-supervisor/compare/v0.4.5...v0.4.7
